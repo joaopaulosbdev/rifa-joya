@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rifa de Casamento</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 font-size=%2290%22>💍</svg>">
+<style>
+:root{
+  --rose:#b76e79; --rose-dk:#8f4f58; --gold:#c9a15a; --bg:#fdf8f5; --card:#ffffff;
+  --text:#3a2b2e; --muted:#8a7a7c; --line:#eadfdc;
+  --livre:#ffffff; --livre-bd:#d8c7c3; --reservado:#f5c76b; --confirmado:#8fae7a;
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Georgia,'Times New Roman',serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.hero{position:relative;padding:48px 20px 36px;text-align:center;background:linear-gradient(180deg,rgba(183,110,121,.12),transparent);}
+.hero img{max-width:220px;width:60%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;box-shadow:0 6px 24px rgba(0,0,0,.15);margin-bottom:14px;}
+.hero h1{font-size:clamp(24px,5vw,38px);margin:6px 0;font-weight:400;letter-spacing:.5px;}
+.hero .sub{color:var(--muted);font-size:15px;margin:0 0 10px;font-style:italic;}
+.hero p{max-width:560px;margin:10px auto 0;color:var(--text);opacity:.85;line-height:1.5;font-size:15px;}
+.badge{display:inline-block;margin-top:14px;background:var(--rose);color:#fff;padding:8px 18px;border-radius:30px;font-size:14px;letter-spacing:.5px;font-family:system-ui,sans-serif;}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px 60px;}
+.legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:22px 0;font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:8px;margin-top:10px;}
+.num{aspect-ratio:1/1;border-radius:8px;border:1.5px solid var(--livre-bd);background:var(--livre);color:var(--text);font-family:system-ui,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s;}
+.num:hover{transform:scale(1.06);}
+.num.reservado{background:var(--reservado);border-color:var(--reservado);color:#4a3a12;}
+.num.confirmado{background:var(--confirmado);border-color:var(--confirmado);color:#fff;cursor:default;}
+.num.confirmado:hover{transform:none;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
+.overlay.show{display:flex;}
+.modal{background:var(--card);border-radius:14px;padding:24px;max-width:400px;width:calc(100% - 8px);font-family:system-ui,sans-serif;max-height:90vh;overflow-y:auto;}
+.modal h3{margin:0 0 4px;font-family:Georgia,serif;font-weight:400;font-size:20px;}
+.modal .muted{color:var(--muted);font-size:13px;margin-bottom:14px;}
+.modal label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;}
+.modal input,.modal textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:16px;font-family:inherit;}
+.pixbox{background:var(--bg);border:1px dashed var(--gold);border-radius:10px;padding:10px 12px;margin:12px 0;font-size:13px;word-break:break-all;}
+.pixbox b{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+.row{display:flex;gap:8px;margin-top:16px;}
+.btn{flex:1;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:system-ui,sans-serif;}
+.btn-primary{background:var(--rose);color:#fff;}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:7px;flex:none;}
+.wa-link{display:block;text-align:center;margin-top:8px;font-size:13px;color:var(--rose-dk);}
+.fab{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));right:18px;background:var(--rose-dk);color:#fff;border:none;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:40;}
+.fab.login{background:var(--rose);font-size:13px;width:auto;padding:0 16px;border-radius:24px;font-family:system-ui,sans-serif;}
+.admin-panel{padding:20px 24px;}
+.admin-panel h2{font-family:Georgia,serif;font-weight:400;margin-top:0;}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.tab{padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;font-size:13px;}
+.tab.active{background:var(--rose);color:#fff;border-color:var(--rose);}
+.pane{display:none;}
+.pane.active{display:block;}
+.list-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;gap:8px;flex-wrap:wrap;}
+.list-row .info{flex:1;min-width:120px;}
+.list-row .info b{display:block;}
+.list-row .info span{color:var(--muted);font-size:12px;}
+.status-pill{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;}
+.status-pill.reservado{background:var(--reservado);color:#4a3a12;}
+.status-pill.confirmado{background:var(--confirmado);color:#fff;}
+.empty{color:var(--muted);font-size:13px;padding:14px 0;text-align:center;}
+.msg{font-size:13px;padding:8px 10px;border-radius:8px;margin-top:10px;}
+.msg.ok{background:#e3f0dc;color:#3b5c2a;}
+.msg.err{background:#f6dede;color:#7a2b2b;}
+.setup-warn{background:#f6dede;color:#7a2b2b;font-family:system-ui,sans-serif;font-size:13px;text-align:center;padding:10px 16px;}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-family:system-ui,sans-serif;}
+</style>
+</head>
+<body>
+
+<div id="setupWarn" class="setup-warn" style="display:none;">
+  ⚠️ Configure o Firebase no arquivo index.html (procure "firebaseConfig") antes de usar o site.
+</div>
+
+<div class="hero">
+  <img id="coverImg" src="" alt="" style="display:none;">
+  <h1 id="hTitle">Rifa do Casamento</h1>
+  <div class="sub" id="hSub"></div>
+  <p id="hDesc"></p>
+  <div class="badge" id="hPrice"></div>
+</div>
+
+<div class="wrap">
+  <div class="legend">
+    <span><i class="dot" style="background:var(--livre);border:1px solid var(--livre-bd)"></i>Disponível</span>
+    <span><i class="dot" style="background:var(--reservado)"></i>Reservado</span>
+    <span><i class="dot" style="background:var(--confirmado)"></i>Confirmado</span>
+  </div>
+  <div id="initBox" style="display:none;text-align:center;margin:20px 0;">
+    <button class="btn btn-primary" style="max-width:260px" onclick="initRaffle()">Inicializar os 200 números</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<footer>Feito com carinho para o nosso grande dia 💍</footer>
+
+<!-- Modal reserva -->
+<div class="overlay" id="ovReserve">
+  <div class="modal">
+    <h3 id="mNum"></h3>
+    <div class="muted">Preencha seus dados para reservar este número</div>
+    <label>Nome</label><input id="rNome" placeholder="Seu nome">
+    <label>WhatsApp</label><input id="rFone" placeholder="(00) 00000-0000">
+    <div class="pixbox" id="pixBoxShow"></div>
+    <div id="rMsg"></div>
+    <div class="row">
+      <button class="btn btn-ghost" onclick="closeModal('ovReserve')">Cancelar</button>
+      <button class="btn btn-primary" onclick="submitReserve()">Reservar</button>
+    </div>
+    <a class="wa-link" id="waLink" href="#" target="_blank" style="display:none;">Prefere confirmar por WhatsApp? Clique aqui</a>
+  </div>
+</div>
+
+<!-- Botão admin / login -->
+<button class="fab" id="fabAdmin" style="display:none;" onclick="openModal('ovAdmin')" title="Painel do administrador">⚙️</button>
+<button class="fab login" id="fabLogin" onclick="openModal('ovLogin')">Sou o admin</button>
+
+<!-- Modal login -->
+<div class="overlay" id="ovLogin">
+  <div class="modal" style="max-width:320px;">
+    <h3>Área do administrador</h3>
+    <label>Senha</label><input id="loginPass" type="password" placeholder="Senha do admin">
+    <div id="loginMsg"></div>
+    <div class="row">
+      <button class="btn btn-ghost" onclick="closeModal('ovLogin')">Cancelar</button>
+      <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal admin -->
+<div class="overlay" id="ovAdmin">
+  <div class="modal admin-panel" style="max-width:520px;">
+    <h2>Painel do Administrador</h2>
+    <div class="tabs">
+      <button class="tab active" data-p="pCapa" onclick="switchTab('pCapa')">Capa</button>
+      <button class="tab" data-p="pPix" onclick="switchTab('pPix')">PIX / Contato</button>
+      <button class="tab" data-p="pRes" onclick="switchTab('pRes')">Reservas</button>
+    </div>
+
+    <div class="pane active" id="pCapa">
+      <label>Título</label><input id="cTitle">
+      <label>Subtítulo (ex: nomes do casal)</label><input id="cSub">
+      <label>Data / local do sorteio</label><input id="cDate">
+      <label>Descrição</label><textarea id="cDesc" rows="3"></textarea>
+      <label>Foto de capa</label>
+      <input type="file" id="cImgFile" accept="image/*" onchange="handleImgFile(event)">
+      <div id="cImgPreviewBox" style="margin-top:8px;"></div>
+      <label>Valor por número</label><input id="cPrice" placeholder="R$ 20,00">
+      <div class="row"><button class="btn btn-primary" onclick="saveConfig()">Salvar</button></div>
+      <div id="cMsg"></div>
+    </div>
+
+    <div class="pane" id="pPix">
+      <label>Chave PIX</label><input id="cPix" placeholder="CPF, e-mail, telefone ou chave aleatória">
+      <label>Link de pagamento (opcional)</label><input id="cPixLink" placeholder="https://...">
+      <label>WhatsApp para confirmação (com DDI/DDD)</label><input id="cWpp" placeholder="5582999999999">
+      <div class="row"><button class="btn btn-primary" onclick="saveConfig()">Salvar</button></div>
+      <div id="pMsg"></div>
+    </div>
+
+    <div class="pane" id="pRes">
+      <div id="resList"></div>
+    </div>
+
+    <div class="row" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeModal('ovAdmin')">Fechar</button>
+      <button class="btn btn-ghost" onclick="logoutAdmin()">Sair</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase (compat SDK, funciona com <script> simples, sem build) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+/* ======================================================================
+   1) CONFIGURAÇÃO — troque pelos dados do SEU projeto Firebase
+      (Firebase Console > Configurações do projeto > Seus apps > Web)
+   ====================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBnjn86LEP9eWeKQZ-kzkkhZyG8yH2BXKQ",
+  authDomain: "rifadosnoivos.firebaseapp.com",
+  projectId: "rifadosnoivos",
+  storageBucket: "rifadosnoivos.firebasestorage.app",
+  messagingSenderId: "923076122216",
+  appId: "1:923076122216:web:ed042d787febe8ba3ccddd",
+  measurementId: "G-FL9BGM5V7L"
+};
+
+/* 2) SENHA DO ADMIN — troque por uma senha sua antes de publicar */
+const ADMIN_PASSWORD = "Joya2025#";
+/* ====================================================================== */
+
+let db=null, isAdmin=false, state={config:{},numbers:{}}, activeNum=null, currentImgData='';
+
+if(!firebaseConfig.apiKey || firebaseConfig.apiKey==="SUA_API_KEY"){
+  document.getElementById('setupWarn').style.display='block';
+} else {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+}
+
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function switchTab(p){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
+  document.querySelectorAll('.pane').forEach(el=>el.classList.toggle('active',el.id===p));
+  if(p==='pRes') renderResList();
+}
+
+function doLogin(){
+  const val=document.getElementById('loginPass').value;
+  const msg=document.getElementById('loginMsg');
+  if(val===ADMIN_PASSWORD){
+    isAdmin=true;
+    localStorage.setItem('rifa_admin','1');
+    closeModal('ovLogin');
+    updateAdminUI();
+    render();
+  } else {
+    msg.innerHTML='<div class="msg err">Senha incorreta.</div>';
+  }
+}
+function logoutAdmin(){
+  isAdmin=false;
+  localStorage.removeItem('rifa_admin');
+  closeModal('ovAdmin');
+  updateAdminUI();
+  render();
+}
+function updateAdminUI(){
+  document.getElementById('fabAdmin').style.display=isAdmin?'flex':'none';
+  document.getElementById('fabLogin').style.display=isAdmin?'none':'flex';
+}
+
+function render(){
+  const c=state.config||{};
+  document.getElementById('hTitle').textContent=c.title||'Rifa do Casamento';
+  document.getElementById('hSub').textContent=[c.subtitle,c.date].filter(Boolean).join(' • ');
+  document.getElementById('hDesc').textContent=c.desc||'Ajude a realizar esse sonho escolhendo seu número da sorte!';
+  document.getElementById('hPrice').textContent=c.price?('Número: '+c.price):'';
+  const img=document.getElementById('coverImg');
+  if(c.img){img.src=c.img;img.style.display='inline-block';}else{img.style.display='none';}
+
+  const nums=state.numbers||{};
+  const hasNums=Object.keys(nums).length>0;
+  document.getElementById('initBox').style.display=(isAdmin&&!hasNums)?'block':'none';
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  for(let i=1;i<=200;i++){
+    const n=nums[i]||{status:'livre'};
+    const b=document.createElement('button');
+    b.className='num '+(n.status||'livre');
+    b.textContent=String(i).padStart(3,'0');
+    b.onclick=()=>onNumClick(i,n);
+    grid.appendChild(b);
+  }
+
+  document.getElementById('cTitle').value=c.title||'';
+  document.getElementById('cSub').value=c.subtitle||'';
+  document.getElementById('cDate').value=c.date||'';
+  document.getElementById('cDesc').value=c.desc||'';
+  currentImgData=c.img||'';
+  document.getElementById('cImgPreviewBox').innerHTML=c.img?('<img src="'+c.img+'" style="max-width:160px;border-radius:10px;display:block;">'):'<span class="muted">Nenhuma foto ainda.</span>';
+  document.getElementById('cPrice').value=c.price||'';
+  document.getElementById('cPix').value=c.pix||'';
+  document.getElementById('cPixLink').value=c.pixLink||'';
+  document.getElementById('cWpp').value=c.wpp||'';
+}
+
+function onNumClick(i,n){
+  if(n.status==='confirmado')return;
+  if(n.status==='reservado' && !isAdmin){
+    alert('Este número já está reservado. Aguardando confirmação.');
+    return;
+  }
+  activeNum=i;
+  document.getElementById('mNum').textContent='Número '+String(i).padStart(3,'0');
+  document.getElementById('rNome').value=n.nome||'';
+  document.getElementById('rFone').value=n.fone||'';
+  document.getElementById('rMsg').innerHTML='';
+  const c=state.config||{};
+  let pixHtml='';
+  if(c.pix) pixHtml+='<b>Chave PIX</b>'+c.pix;
+  if(c.pixLink) pixHtml+='<br><br><b>Link de pagamento</b>'+c.pixLink;
+  document.getElementById('pixBoxShow').innerHTML=pixHtml||'<span class="muted">Chave PIX ainda não cadastrada.</span>';
+  const wa=document.getElementById('waLink');
+  if(c.wpp){
+    wa.href='https://wa.me/'+c.wpp+'?text='+encodeURIComponent('Olá! Quero reservar o número '+String(i).padStart(3,'0')+' da rifa.');
+    wa.style.display='block';
+  } else wa.style.display='none';
+  openModal('ovReserve');
+}
+
+async function submitReserve(){
+  const nome=document.getElementById('rNome').value.trim();
+  const fone=document.getElementById('rFone').value.trim();
+  const msgEl=document.getElementById('rMsg');
+  if(!nome||!fone){msgEl.innerHTML='<div class="msg err">Preencha nome e WhatsApp.</div>';return;}
+  if(!db){msgEl.innerHTML='<div class="msg err">Site ainda não configurado. Fale com a organização.</div>';return;}
+  try{
+    await db.collection('raffle').doc('data').update({
+      ['numbers.'+activeNum+'.status']:'reservado',
+      ['numbers.'+activeNum+'.nome']:nome,
+      ['numbers.'+activeNum+'.fone']:fone,
+      ['numbers.'+activeNum+'.ts']:Date.now()
+    });
+    msgEl.innerHTML='<div class="msg ok">Reserva feita! Envie o comprovante do PIX para confirmar.</div>';
+  }catch(e){
+    msgEl.innerHTML='<div class="msg err">Não foi possível reservar automaticamente. Use o link do WhatsApp abaixo para confirmar direto com a organização.</div>';
+  }
+}
+
+async function initRaffle(){
+  if(!db)return;
+  const numbers={};
+  for(let i=1;i<=200;i++) numbers[i]={status:'livre'};
+  try{
+    await db.collection('raffle').doc('data').set({config:state.config||{},numbers},{merge:true});
+  }catch(e){alert('Não foi possível inicializar. Tente novamente.');}
+}
+
+function resizeImage(file,maxDim,quality){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>h){ if(w>maxDim){h=Math.round(h*maxDim/w);w=maxDim;} }
+        else{ if(h>maxDim){w=Math.round(w*maxDim/h);h=maxDim;} }
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=reject;
+      img.src=reader.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImgFile(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  const box=document.getElementById('cImgPreviewBox');
+  box.innerHTML='<span class="muted">Processando imagem...</span>';
+  try{
+    const dataUrl=await resizeImage(file,700,0.82);
+    currentImgData=dataUrl;
+    box.innerHTML='<img src="'+dataUrl+'" style="max-width:160px;border-radius:10px;display:block;">';
+  }catch(e){
+    box.innerHTML='<span class="muted">Não foi possível processar essa imagem.</span>';
+  }
+}
+
+async function saveConfig(){
+  if(!db)return;
+  const patch={
+    ['config.title']:document.getElementById('cTitle').value,
+    ['config.subtitle']:document.getElementById('cSub').value,
+    ['config.date']:document.getElementById('cDate').value,
+    ['config.desc']:document.getElementById('cDesc').value,
+    ['config.img']:currentImgData,
+    ['config.price']:document.getElementById('cPrice').value,
+    ['config.pix']:document.getElementById('cPix').value,
+    ['config.pixLink']:document.getElementById('cPixLink').value,
+    ['config.wpp']:document.getElementById('cWpp').value,
+  };
+  try{
+    await db.collection('raffle').doc('data').update(patch);
+    ['cMsg','pMsg'].forEach(id=>document.getElementById(id).innerHTML='<div class="msg ok">Salvo!</div>');
+  }catch(e){
+    ['cMsg','pMsg'].forEach(id=>document.getElementById(id).innerHTML='<div class="msg err">Erro ao salvar.</div>');
+  }
+}
+
+function renderResList(){
+  const nums=state.numbers||{};
+  const entries=Object.entries(nums).filter(([k,v])=>v.status && v.status!=='livre').sort((a,b)=>a[0]-b[0]);
+  const box=document.getElementById('resList');
+  if(!entries.length){box.innerHTML='<div class="empty">Nenhuma reserva ainda.</div>';return;}
+  box.innerHTML=entries.map(([k,v])=>`
+    <div class="list-row">
+      <div class="info"><b>#${String(k).padStart(3,'0')} — ${v.nome||'—'}</b><span>${v.fone||''}</span></div>
+      <span class="status-pill ${v.status}">${v.status==='confirmado'?'Confirmado':'Reservado'}</span>
+      <button class="btn btn-sm btn-primary" onclick="setStatus(${k},'confirmado')">✓</button>
+      <button class="btn btn-sm btn-ghost" onclick="setStatus(${k},'livre')">Liberar</button>
+    </div>`).join('');
+}
+
+async function setStatus(i,status){
+  if(!db)return;
+  const patch={['numbers.'+i+'.status']:status};
+  if(status==='livre'){patch['numbers.'+i+'.nome']='';patch['numbers.'+i+'.fone']='';}
+  try{ await db.collection('raffle').doc('data').update(patch); }catch(e){alert('Erro ao atualizar.');}
+}
+
+isAdmin = localStorage.getItem('rifa_admin')==='1';
+updateAdminUI();
+if(db){
+  db.collection('raffle').doc('data').onSnapshot(doc=>{
+    const d=doc.data();
+    state = d ? {config:d.config||{},numbers:d.numbers||{}} : {config:{},numbers:{}};
+    render();
+    if(document.getElementById('pRes').classList.contains('active')) renderResList();
+  }, err=>{ console.error(err); });
+} else {
+  render();
+}
+</script>
+</body>
+</html>
