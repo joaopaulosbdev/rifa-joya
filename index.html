@@ -193,9 +193,10 @@ const firebaseConfig = {
   measurementId: "G-FL9BGM5V7L"
 };
 
-/* 2) ADMIN — só estes Gmails abrem o painel (minúsculas). */
+/* 2) ADMIN — contas Google que abrem o painel. */
 const ADMIN_EMAILS = [
-  'seu-gmail@gmail.com'
+  'joaopaulo2sb@gmail.com',
+  'joaopaulo2sb@outlook.com'
 ];
 /* ====================================================================== */
 
@@ -216,17 +217,82 @@ function switchTab(p){
   if(p==='pRes') renderResList();
 }
 
-function isAllowedAdmin(user){
-  const email=(user&&user.email||'').toLowerCase();
-  return ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(email);
+function normalizeEmail(email){
+  const raw=String(email||'').toLowerCase().trim();
+  const at=raw.lastIndexOf('@');
+  if(at<0) return raw;
+  let local=raw.slice(0,at).split('+')[0];
+  let domain=raw.slice(at+1);
+  if(domain==='googlemail.com') domain='gmail.com';
+  if(domain==='gmail.com') local=local.replace(/\./g,'');
+  return local+'@'+domain;
+}
+function allowedAdminSet(){
+  return new Set(ADMIN_EMAILS.map(normalizeEmail).filter(Boolean));
+}
+async function collectEmails(user, extra){
+  const emails=new Set();
+  const add=(e)=>{ const n=normalizeEmail(e); if(n&&n.includes('@')) emails.add(n); };
+  if(!user) return emails;
+  add(extra);
+  add(user.email);
+  (user.providerData||[]).forEach(p=>add(p&&p.email));
+  if(!emails.size){
+    try{ await user.reload(); }catch(e){}
+    const u=firebase.auth().currentUser;
+    if(u){
+      add(u.email);
+      (u.providerData||[]).forEach(p=>add(p&&p.email));
+    }
+  }
+  if(!emails.size){
+    try{
+      const token=await user.getIdTokenResult(true);
+      add(token.claims&&token.claims.email);
+    }catch(e){}
+  }
+  return emails;
+}
+function hasAllowedEmail(emails){
+  const allowed=allowedAdminSet();
+  for(const email of emails){ if(allowed.has(email)) return true; }
+  return false;
+}
+function googleProvider(){
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  provider.setCustomParameters({prompt:'select_account'});
+  return provider;
+}
+async function finishAdminLogin(user, extraEmail){
+  const msg=document.getElementById('loginMsg');
+  const emails=await collectEmails(user, extraEmail);
+  if(!emails.size){
+    msg.innerHTML='<div class="msg err">O Google não enviou o e-mail. Tente de novo e autorize o e-mail da conta.</div>';
+    return;
+  }
+  if(!hasAllowedEmail(emails)){
+    msg.innerHTML='<div class="msg err">'+[...emails].join(', ')+' não está na lista de admin.</div>';
+    try{ await firebase.auth().signOut(); }catch(e){}
+    isAdmin=false;
+    updateAdminUI();
+    render();
+    return;
+  }
+  isAdmin=true;
+  closeModal('ovLogin');
+  updateAdminUI();
+  render();
 }
 async function doLogin(){
   const msg=document.getElementById('loginMsg');
   msg.innerHTML='';
-  const provider=new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({prompt:'select_account'});
+  const provider=googleProvider();
   try{
-    await firebase.auth().signInWithPopup(provider);
+    const cred=await firebase.auth().signInWithPopup(provider);
+    const extra=cred.additionalUserInfo&&cred.additionalUserInfo.profile&&cred.additionalUserInfo.profile.email;
+    await finishAdminLogin(cred.user, extra);
   }catch(e){
     if(e&&e.code==='auth/popup-blocked'){
       try{ await firebase.auth().signInWithRedirect(provider); return; }
@@ -412,16 +478,28 @@ async function setStatus(i,status){
 
 updateAdminUI();
 if(firebase.apps.length){
-  firebase.auth().onAuthStateChanged(async user=>{
-    if(user && !isAllowedAdmin(user)){
-      const msg=document.getElementById('loginMsg');
-      msg.innerHTML='<div class="msg err">Este Google não é o admin. Troque o e-mail em ADMIN_EMAILS no index.html.</div>';
-      try{ await firebase.auth().signOut(); }catch(e){}
-      isAdmin=false;
-    } else {
-      isAdmin=!!user;
-      if(isAdmin) closeModal('ovLogin');
+  firebase.auth().getRedirectResult().then(cred=>{
+    if(cred&&cred.user){
+      const extra=cred.additionalUserInfo&&cred.additionalUserInfo.profile&&cred.additionalUserInfo.profile.email;
+      return finishAdminLogin(cred.user, extra);
     }
+  }).catch(()=>{});
+  firebase.auth().onAuthStateChanged(async user=>{
+    if(!user){
+      isAdmin=false;
+      updateAdminUI();
+      render();
+      return;
+    }
+    const emails=await collectEmails(user);
+    if(!emails.size){
+      isAdmin=false;
+      updateAdminUI();
+      render();
+      return;
+    }
+    isAdmin=hasAllowedEmail(emails);
+    if(isAdmin) closeModal('ovLogin');
     updateAdminUI();
     render();
   });
