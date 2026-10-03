@@ -123,11 +123,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
 <div class="overlay" id="ovLogin">
   <div class="modal" style="max-width:320px;">
     <h3>Área do administrador</h3>
-    <label>Senha</label><input id="loginPass" type="password" placeholder="Senha do admin">
+    <div class="muted">Entre com a conta Google autorizada. Não há senha no site.</div>
     <div id="loginMsg"></div>
     <div class="row">
       <button class="btn btn-ghost" onclick="closeModal('ovLogin')">Cancelar</button>
-      <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+      <button class="btn btn-primary" onclick="doLogin()">Entrar com Google</button>
     </div>
   </div>
 </div>
@@ -176,6 +176,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
 
 <!-- Firebase (compat SDK, funciona com <script> simples, sem build) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
 /* ======================================================================
@@ -192,8 +193,10 @@ const firebaseConfig = {
   measurementId: "G-FL9BGM5V7L"
 };
 
-/* 2) SENHA DO ADMIN — troque por uma senha sua antes de publicar */
-const ADMIN_PASSWORD = "Joya2025#";
+/* 2) ADMIN — só estes Gmails abrem o painel (minúsculas). */
+const ADMIN_EMAILS = [
+  'seu-gmail@gmail.com'
+];
 /* ====================================================================== */
 
 let db=null, isAdmin=false, state={config:{},numbers:{}}, activeNum=null, currentImgData='';
@@ -213,25 +216,29 @@ function switchTab(p){
   if(p==='pRes') renderResList();
 }
 
-function doLogin(){
-  const val=document.getElementById('loginPass').value;
+function isAllowedAdmin(user){
+  const email=(user&&user.email||'').toLowerCase();
+  return ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(email);
+}
+async function doLogin(){
   const msg=document.getElementById('loginMsg');
-  if(val===ADMIN_PASSWORD){
-    isAdmin=true;
-    localStorage.setItem('rifa_admin','1');
-    closeModal('ovLogin');
-    updateAdminUI();
-    render();
-  } else {
-    msg.innerHTML='<div class="msg err">Senha incorreta.</div>';
+  msg.innerHTML='';
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  try{
+    await firebase.auth().signInWithPopup(provider);
+  }catch(e){
+    if(e&&e.code==='auth/popup-blocked'){
+      try{ await firebase.auth().signInWithRedirect(provider); return; }
+      catch(err){ msg.innerHTML='<div class="msg err">Não foi possível abrir o Google. Tente de novo.</div>'; return; }
+    }
+    if(e&&e.code==='auth/popup-closed-by-user') return;
+    msg.innerHTML='<div class="msg err">Login com Google não concluído. Ative o provedor Google no Firebase.</div>';
   }
 }
-function logoutAdmin(){
-  isAdmin=false;
-  localStorage.removeItem('rifa_admin');
+async function logoutAdmin(){
+  try{ await firebase.auth().signOut(); }catch(e){}
   closeModal('ovAdmin');
-  updateAdminUI();
-  render();
 }
 function updateAdminUI(){
   document.getElementById('fabAdmin').style.display=isAdmin?'flex':'none';
@@ -403,8 +410,22 @@ async function setStatus(i,status){
   try{ await db.collection('raffle').doc('data').update(patch); }catch(e){alert('Erro ao atualizar.');}
 }
 
-isAdmin = localStorage.getItem('rifa_admin')==='1';
 updateAdminUI();
+if(firebase.apps.length){
+  firebase.auth().onAuthStateChanged(async user=>{
+    if(user && !isAllowedAdmin(user)){
+      const msg=document.getElementById('loginMsg');
+      msg.innerHTML='<div class="msg err">Este Google não é o admin. Troque o e-mail em ADMIN_EMAILS no index.html.</div>';
+      try{ await firebase.auth().signOut(); }catch(e){}
+      isAdmin=false;
+    } else {
+      isAdmin=!!user;
+      if(isAdmin) closeModal('ovLogin');
+    }
+    updateAdminUI();
+    render();
+  });
+}
 if(db){
   db.collection('raffle').doc('data').onSnapshot(doc=>{
     const d=doc.data();
