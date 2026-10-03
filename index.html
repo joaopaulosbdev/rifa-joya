@@ -105,7 +105,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
     <h3 id="mNum"></h3>
     <div class="muted">Preencha seus dados para reservar este número</div>
     <label>Nome</label><input id="rNome" placeholder="Seu nome">
-    <label>WhatsApp</label><input id="rFone" placeholder="(00) 00000-0000">
+    <label>WhatsApp (opcional)</label><input id="rFone" placeholder="(00) 00000-0000">
     <div class="pixbox" id="pixBoxShow"></div>
     <div id="rMsg"></div>
     <div class="row">
@@ -374,7 +374,7 @@ async function submitReserve(){
   const nome=document.getElementById('rNome').value.trim();
   const fone=document.getElementById('rFone').value.trim();
   const msgEl=document.getElementById('rMsg');
-  if(!nome||!fone){msgEl.innerHTML='<div class="msg err">Preencha nome e WhatsApp.</div>';return;}
+  if(!nome){msgEl.innerHTML='<div class="msg err">Preencha seu nome.</div>';return;}
   if(!db){msgEl.innerHTML='<div class="msg err">Site ainda não configurado. Fale com a organização.</div>';return;}
   try{
     await db.collection('raffle').doc('data').update({
@@ -383,7 +383,7 @@ async function submitReserve(){
       ['numbers.'+activeNum+'.fone']:fone,
       ['numbers.'+activeNum+'.ts']:Date.now()
     });
-    msgEl.innerHTML='<div class="msg ok">Reserva feita! Envie o comprovante do PIX para confirmar.</div>';
+    closeModal('ovReserve');
   }catch(e){
     msgEl.innerHTML='<div class="msg err">Não foi possível reservar automaticamente. Use o link do WhatsApp abaixo para confirmar direto com a organização.</div>';
   }
