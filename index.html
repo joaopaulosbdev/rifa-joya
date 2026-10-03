@@ -19,7 +19,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Georgia,'Times 
 .hero img{max-width:220px;width:60%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;box-shadow:0 6px 24px rgba(0,0,0,.15);margin-bottom:14px;}
 .hero h1{font-size:clamp(24px,5vw,38px);margin:6px 0;font-weight:400;letter-spacing:.5px;}
 .hero .sub{color:var(--muted);font-size:15px;margin:0 0 10px;font-style:italic;}
-.hero p{max-width:560px;margin:10px auto 0;color:var(--text);opacity:.85;line-height:1.5;font-size:15px;}
+.hero p{max-width:560px;margin:10px auto 0;color:var(--text);opacity:.85;line-height:1.5;font-size:15px;white-space:pre-wrap;text-align:center;}
+.modal textarea{white-space:pre-wrap;resize:vertical;min-height:96px;}
 .badge{display:inline-block;margin-top:14px;background:var(--accent);color:#fff;padding:8px 18px;border-radius:30px;font-size:14px;letter-spacing:.5px;font-family:system-ui,sans-serif;}
 .wrap{max-width:900px;margin:0 auto;padding:0 16px 60px;}
 .legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:22px 0;font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);}
@@ -146,7 +147,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
       <label>Título</label><input id="cTitle">
       <label>Subtítulo (ex: nomes do casal)</label><input id="cSub">
       <label>Data / local do sorteio</label><input id="cDate">
-      <label>Descrição</label><textarea id="cDesc" rows="3"></textarea>
+      <label>Descrição</label><textarea id="cDesc" rows="6"></textarea>
       <label>Foto de capa</label>
       <input type="file" id="cImgFile" accept="image/*" onchange="handleImgFile(event)">
       <div id="cImgPreviewBox" style="margin-top:8px;"></div>
@@ -193,10 +194,9 @@ const firebaseConfig = {
   measurementId: "G-FL9BGM5V7L"
 };
 
-/* 2) ADMIN — contas Google que abrem o painel. */
+/* 2) ADMIN — só estes Gmails abrem o painel (minúsculas). */
 const ADMIN_EMAILS = [
   'joaopaulo2sb@gmail.com',
-  'joaopaulo2sb@outlook.com'
 ];
 /* ====================================================================== */
 
