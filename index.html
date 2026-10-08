@@ -171,6 +171,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
     <div class="pane" id="pSorteio">
       <div id="sInfo" style="font-size:13px;color:var(--muted);margin-bottom:12px;"></div>
       <div class="row" style="margin-top:0;"><button class="btn btn-primary" id="btnDraw" onclick="drawWinner()">🎲 Sortear</button></div>
+      <div id="sStage" style="position:relative;width:240px;height:240px;margin:26px auto 0;display:none;">
+        <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid #c0392b;z-index:3;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));"></div>
+        <div id="sWheel" style="width:100%;height:100%;border-radius:50%;border:5px solid var(--accent-dk);background:repeating-conic-gradient(var(--accent) 0deg 15deg,var(--cream) 15deg 30deg);box-shadow:0 6px 20px rgba(0,0,0,.18);"></div>
+        <div id="sCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:112px;height:112px;border-radius:50%;background:#fff;border:4px solid var(--accent-dk);display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:40px;color:var(--accent-dk);z-index:2;transition:box-shadow .4s;"></div>
+      </div>
       <div id="sResult" style="text-align:center;margin-top:20px;"></div>
     </div>
 
@@ -216,7 +221,10 @@ if(!firebaseConfig.apiKey || firebaseConfig.apiKey==="SUA_API_KEY"){
 }
 
 function openModal(id){document.getElementById(id).classList.add('show');}
-function closeModal(id){document.getElementById(id).classList.remove('show');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('show');
+  if(id==='ovAdmin') resetSorteio();
+}
 function switchTab(p){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
   document.querySelectorAll('.pane').forEach(el=>el.classList.toggle('active',el.id===p));
@@ -502,29 +510,35 @@ function confirmedNumbers(){
     .filter(([k,v])=>v&&v.status==='confirmado')
     .map(([k,v])=>({num:Number(k),nome:v.nome||'',fone:v.fone||''}));
 }
+let drawing=false, drawTimer=null;
+function pad3(n){return String(n).padStart(3,'0');}
 function updateSorteioInfo(){
   const n=confirmedNumbers().length;
   document.getElementById('sInfo').textContent=n
     ? n+(n===1?' número confirmado participa':' números confirmados participam')+' do sorteio.'
     : 'Ainda não há números confirmados para sortear.';
-  document.getElementById('btnDraw').disabled=!n;
+  document.getElementById('btnDraw').disabled=!n||drawing;
 }
-function drawWinner(){
-  const list=confirmedNumbers();
+function resetSorteio(){
+  clearTimeout(drawTimer); drawTimer=null; drawing=false;
+  document.getElementById('sStage').style.display='none';
+  const wheel=document.getElementById('sWheel');
+  wheel.style.transition='none'; wheel.style.transform='rotate(0deg)';
+  const center=document.getElementById('sCenter');
+  center.textContent=''; center.style.boxShadow='none';
+  document.getElementById('sResult').innerHTML='';
+  document.getElementById('btnDraw').textContent='🎲 Sortear';
+  updateSorteioInfo();
+}
+function showWinner(w){
   const box=document.getElementById('sResult');
   box.innerHTML='';
-  if(!list.length){updateSorteioInfo();return;}
-  const buf=new Uint32Array(1);
-  const limit=Math.floor(4294967296/list.length)*list.length;
-  do{ crypto.getRandomValues(buf); }while(buf[0]>=limit);
-  const w=list[buf[0]%list.length];
-
   const label=document.createElement('div');
   label.style.cssText='font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;';
   label.textContent='Número sorteado';
   const big=document.createElement('div');
-  big.style.cssText='font-family:Georgia,serif;font-size:56px;color:var(--accent-dk);line-height:1.1;margin:6px 0;';
-  big.textContent=String(w.num).padStart(3,'0');
+  big.style.cssText='font-family:Georgia,serif;font-size:44px;color:var(--accent-dk);line-height:1.1;margin:6px 0;';
+  big.textContent=pad3(w.num);
   const nome=document.createElement('div');
   nome.style.cssText='font-size:18px;font-weight:600;';
   nome.textContent=w.nome||'—';
@@ -535,6 +549,55 @@ function drawWinner(){
     f.textContent=w.fone;
     box.appendChild(f);
   }
+}
+function drawWinner(){
+  if(drawing) return;
+  const list=confirmedNumbers();
+  if(!list.length){updateSorteioInfo();return;}
+  // vencedor definido por sorteio aleatório do navegador (chances iguais)
+  const buf=new Uint32Array(1);
+  const limit=Math.floor(4294967296/list.length)*list.length;
+  do{ crypto.getRandomValues(buf); }while(buf[0]>=limit);
+  const winner=list[buf[0]%list.length];
+
+  drawing=true;
+  document.getElementById('sResult').innerHTML='';
+  document.getElementById('btnDraw').textContent='Sorteando...';
+  updateSorteioInfo();
+
+  const stage=document.getElementById('sStage');
+  const wheel=document.getElementById('sWheel');
+  const center=document.getElementById('sCenter');
+  stage.style.display='block';
+  center.style.boxShadow='none';
+  wheel.style.transition='none';
+  wheel.style.transform='rotate(0deg)';
+  void wheel.offsetWidth;
+  wheel.style.transition='transform 5.6s cubic-bezier(.12,.6,.1,1)';
+  wheel.style.transform='rotate('+(360*6+Math.floor(Math.random()*360))+'deg)';
+
+  const steps=34;
+  let step=0, last=-1;
+  function tick(){
+    if(step>=steps){
+      drawing=false;
+      center.style.boxShadow='0 0 0 6px var(--admin),0 0 24px 8px rgba(247,218,78,.7)';
+      showWinner(winner);
+      document.getElementById('btnDraw').textContent='🎲 Sortear de novo';
+      updateSorteioInfo();
+      return;
+    }
+    let item;
+    if(step===steps-1){ item=winner; }
+    else{
+      do{ item=list[Math.floor(Math.random()*list.length)]; }while(list.length>1&&item.num===last);
+    }
+    last=item.num;
+    center.textContent=pad3(item.num);
+    step++;
+    drawTimer=setTimeout(tick,60+Math.pow(step/steps,3)*420);
+  }
+  tick();
 }
 
 async function setStatus(i,status){
