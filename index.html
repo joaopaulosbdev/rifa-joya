@@ -106,7 +106,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
     <div class="muted">Preencha seus dados para reservar este número</div>
     <label>Nome</label><input id="rNome" placeholder="Seu nome">
     <label>WhatsApp (opcional)</label><input id="rFone" placeholder="(00) 00000-0000">
-    <div class="pixbox" id="pixBoxShow"></div>
+    <button class="btn btn-primary" id="btnCopyPix" style="display:none;width:100%;margin:14px 0 4px;" onclick="copyPix()">Copiar chave PIX</button>
     <div id="rMsg"></div>
     <div class="row">
       <button class="btn btn-ghost" onclick="closeModal('ovReserve')">Cancelar</button>
@@ -157,8 +157,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
     </div>
 
     <div class="pane" id="pPix">
-      <label>Chave PIX</label><input id="cPix" placeholder="CPF, e-mail, telefone ou chave aleatória">
-      <label>Link de pagamento (opcional)</label><input id="cPixLink" placeholder="https://...">
+      <label>Chave PIX / link (é o que o botão "Copiar chave PIX" vai copiar)</label><input id="cPix" placeholder="Chave PIX, código copia e cola ou link de pagamento">
       <label>WhatsApp para confirmação (com DDI/DDD)</label><input id="cWpp" placeholder="5582999999999">
       <div class="row"><button class="btn btn-primary" onclick="saveConfig()">Salvar</button></div>
       <div id="pMsg"></div>
@@ -342,7 +341,6 @@ function render(){
   document.getElementById('cImgPreviewBox').innerHTML=c.img?('<img src="'+c.img+'" style="max-width:160px;border-radius:10px;display:block;">'):'<span class="muted">Nenhuma foto ainda.</span>';
   document.getElementById('cPrice').value=c.price||'';
   document.getElementById('cPix').value=c.pix||'';
-  document.getElementById('cPixLink').value=c.pixLink||'';
   document.getElementById('cWpp').value=c.wpp||'';
 }
 
@@ -358,16 +356,38 @@ function onNumClick(i,n){
   document.getElementById('rFone').value=n.fone||'';
   document.getElementById('rMsg').innerHTML='';
   const c=state.config||{};
-  let pixHtml='';
-  if(c.pix) pixHtml+='<b>Chave PIX</b>'+c.pix;
-  if(c.pixLink) pixHtml+='<br><br><b>Link de pagamento</b>'+c.pixLink;
-  document.getElementById('pixBoxShow').innerHTML=pixHtml||'<span class="muted">Chave PIX ainda não cadastrada.</span>';
+  const btnPix=document.getElementById('btnCopyPix');
+  btnPix.textContent='Copiar chave PIX';
+  btnPix.style.display=c.pix?'block':'none';
   const wa=document.getElementById('waLink');
   if(c.wpp){
     wa.href='https://wa.me/'+c.wpp+'?text='+encodeURIComponent('Olá! Quero reservar o número '+String(i).padStart(3,'0')+' da rifa.');
     wa.style.display='block';
   } else wa.style.display='none';
   openModal('ovReserve');
+}
+
+async function copyPix(){
+  const text=((state.config||{}).pix||'').trim();
+  const btn=document.getElementById('btnCopyPix');
+  if(!text)return;
+  let ok=false;
+  try{
+    await navigator.clipboard.writeText(text);
+    ok=true;
+  }catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=text;
+      ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus();ta.select();
+      ok=document.execCommand('copy');
+      document.body.removeChild(ta);
+    }catch(err){}
+  }
+  btn.textContent=ok?'Copiado! ✓':'Não foi possível copiar';
+  setTimeout(()=>{btn.textContent='Copiar chave PIX';},2000);
 }
 
 async function submitReserve(){
@@ -444,7 +464,6 @@ async function saveConfig(){
     ['config.img']:currentImgData,
     ['config.price']:document.getElementById('cPrice').value,
     ['config.pix']:document.getElementById('cPix').value,
-    ['config.pixLink']:document.getElementById('cPixLink').value,
     ['config.wpp']:document.getElementById('cWpp').value,
   };
   try{
