@@ -141,6 +141,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
       <button class="tab active" data-p="pCapa" onclick="switchTab('pCapa')">Capa</button>
       <button class="tab" data-p="pPix" onclick="switchTab('pPix')">PIX / Contato</button>
       <button class="tab" data-p="pRes" onclick="switchTab('pRes')">Reservas</button>
+      <button class="tab" data-p="pSorteio" onclick="switchTab('pSorteio')">Sorteio</button>
     </div>
 
     <div class="pane active" id="pCapa">
@@ -165,6 +166,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px;font-fam
 
     <div class="pane" id="pRes">
       <div id="resList"></div>
+    </div>
+
+    <div class="pane" id="pSorteio">
+      <div id="sInfo" style="font-size:13px;color:var(--muted);margin-bottom:12px;"></div>
+      <div class="row" style="margin-top:0;"><button class="btn btn-primary" id="btnDraw" onclick="drawWinner()">🎲 Sortear</button></div>
+      <div id="sResult" style="text-align:center;margin-top:20px;"></div>
     </div>
 
     <div class="row" style="margin-top:16px;">
@@ -214,6 +221,7 @@ function switchTab(p){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
   document.querySelectorAll('.pane').forEach(el=>el.classList.toggle('active',el.id===p));
   if(p==='pRes') renderResList();
+  if(p==='pSorteio') updateSorteioInfo();
 }
 
 function normalizeEmail(email){
@@ -488,6 +496,47 @@ function renderResList(){
     </div>`).join('');
 }
 
+function confirmedNumbers(){
+  const nums=state.numbers||{};
+  return Object.entries(nums)
+    .filter(([k,v])=>v&&v.status==='confirmado')
+    .map(([k,v])=>({num:Number(k),nome:v.nome||'',fone:v.fone||''}));
+}
+function updateSorteioInfo(){
+  const n=confirmedNumbers().length;
+  document.getElementById('sInfo').textContent=n
+    ? n+(n===1?' número confirmado participa':' números confirmados participam')+' do sorteio.'
+    : 'Ainda não há números confirmados para sortear.';
+  document.getElementById('btnDraw').disabled=!n;
+}
+function drawWinner(){
+  const list=confirmedNumbers();
+  const box=document.getElementById('sResult');
+  box.innerHTML='';
+  if(!list.length){updateSorteioInfo();return;}
+  const buf=new Uint32Array(1);
+  const limit=Math.floor(4294967296/list.length)*list.length;
+  do{ crypto.getRandomValues(buf); }while(buf[0]>=limit);
+  const w=list[buf[0]%list.length];
+
+  const label=document.createElement('div');
+  label.style.cssText='font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;';
+  label.textContent='Número sorteado';
+  const big=document.createElement('div');
+  big.style.cssText='font-family:Georgia,serif;font-size:56px;color:var(--accent-dk);line-height:1.1;margin:6px 0;';
+  big.textContent=String(w.num).padStart(3,'0');
+  const nome=document.createElement('div');
+  nome.style.cssText='font-size:18px;font-weight:600;';
+  nome.textContent=w.nome||'—';
+  box.append(label,big,nome);
+  if(w.fone){
+    const f=document.createElement('div');
+    f.style.cssText='font-size:14px;color:var(--muted);margin-top:4px;';
+    f.textContent=w.fone;
+    box.appendChild(f);
+  }
+}
+
 async function setStatus(i,status){
   if(!db)return;
   const patch={['numbers.'+i+'.status']:status};
@@ -529,6 +578,7 @@ if(db){
     state = d ? {config:d.config||{},numbers:d.numbers||{}} : {config:{},numbers:{}};
     render();
     if(document.getElementById('pRes').classList.contains('active')) renderResList();
+    if(document.getElementById('pSorteio').classList.contains('active')) updateSorteioInfo();
   }, err=>{ console.error(err); });
 } else {
   render();
